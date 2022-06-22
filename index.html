@@ -4,48 +4,19 @@
 <head>
     <meta charset="utf-8" />
     <title></title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
 </head>
 <body>
-    <defs>
-        <linearGradient id="oceanGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <div id="category">
-                <div>Select Category</div>
-                <select id="control">
-                    <option selected="selected" value="gender">Gender</option>
-                    <option value="vaccinated">Vaccination Status</option>
-                </select>
+    <div id="category">
+        <div>Select Category</div>
+        <select id="control">
+            <option selected="selected" value="gender">Gender</option>
+            <option value="vaccinated">Vaccination Status</option>
+        </select>
 
-            </div>
-        </linearGradient>
-    </defs>
+    </div>
     <svg viewBox="0 0 1300 800">
-        <g id="districts"></g>
-        <g transform="translate(1000,200)">
-            <g class="legendCells" transform="translate(0,15)">
-                <g class="cell" transform="translate(0,0)">
-                    <rect class="swatch" height="15" width="60" style="fill: rgb(100, 149, 237); "></rect>
-                    <text class="label" transform="translate(87,12)" style="text-anchor: middle;"> Female</text>
-                </g>
-                <g class="cell" transform="translate(0,20)">
-                    <rect class="swatch" height="15" width="60" style="fill: rgb(255, 192, 203); "></rect>
-                    <text class="label" transform="translate(80,12)" style="text-anchor: middle;"> Male</text>
-                </g>
-                <g class="cell" transform="translate(0,80)">
-                    <rect class="swatch" height="15" width="60" style="fill: rgb(45,201,55); "></rect>
-                    <text class="label" transform="translate(97,12)" style="text-anchor: middle;">Vaccinated</text>
-                </g>
-                <g class="cell" transform="translate(0,100)">
-                    <rect class="swatch" height="15" width="60" style="fill: rgb(219,123,43); "></rect>
-                    <text class="label" transform="translate(85,12)" style="text-anchor: middle;">Partial</text>
-                </g>
-                <g class="cell" transform="translate(0,120)">
-                    <rect class="swatch" height="15" width="60" style="fill: rgb(204,50,50); "></rect>
-                    <text class="label" transform="translate(115,12)" style="text-anchor: middle;">Not-Vaccinated</text>
-                </g>
-            </g>
-            <text class="gendTitle">Gender Legend</text>
-            <text class="vacTitle" transform="translate(0,85)">Vaccination Legend</text>
-        </g>
     </svg>
     <div class="tooltip"></div>
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -54,6 +25,9 @@
             height = 800;
 
         let svg = d3.select("svg").attr("viewBox", "0 0 " + width + " " + height);
+
+        var ranges = ["Male", "Female", "Vaccinated", "Partial", "Non-Vaccinated"]
+        var colorScheme = ["#FFC0CB", "#6495ED", "#2dc937", "#db7b2b", "#cc3232"]
 
         // Load external data
         Promise.all([
@@ -125,6 +99,37 @@
                 no: "#cc3232",
             };
 
+            var genderLabelsLegend = ["Male", "Female"];
+            var vacLabelsLegend = ["Vaccinated", "Partial", "Non-Vaccinated"];
+            var genderRangeLegend = ["Male", "Female"];
+            let genderColorLegend = ["#FFC0CB", "#6495ED"];
+            var vaccinationRangeLegend = ["yes", "partial", "no"];
+            let vaccinationStatusColorLegend = ["#2dc937", "#db7b2b", "#cc3232"];
+
+            var colorScaleGender = d3.scaleThreshold()
+                .domain(genderRangeLegend)
+                .range(genderColorLegend);
+
+            var colorScaleVac = d3.scaleThreshold()
+                .domain(vaccinationRangeLegend)
+                .range(vaccinationStatusColorLegend);
+
+            var genderLegend = d3
+                .legendColor()
+                .scale(colorScaleGender)
+                .shapeWidth(60)
+                .labels(genderLabelsLegend)
+                .orient("vertical")
+                .title("Gender Legend");
+
+            var vacLegend = d3
+                .legendColor()
+                .scale(colorScaleVac)
+                .shapeWidth(60)
+                .labels(vacLabelsLegend)
+                .orient("vertical")
+                .title("Vaccination Legend");
+
             let node = svg
                 .append("g")
                 .attr("id", "nodes")
@@ -143,14 +148,14 @@
                     tooltip
                         .html(
                             `Age: ${d.age}<br>
-                                                Gender: ${d.gender}<br>
-                                                Nationality: ${d.nationality}<br>
-                                                Occupation: ${d.occupation}<br>
-                                                Organization: ${d.organization}<br>
-                                                Vaccinated: ${d.vaccinated}`)
+                                                    Gender: ${d.gender}<br>
+                                                    Nationality: ${d.nationality}<br>
+                                                    Occupation: ${d.occupation}<br>
+                                                    Organization: ${d.organization}<br>
+                                                    Vaccinated: ${d.vaccinated}`)
                         .style("left", mouse_cursor.x + "px")
                         .style("top", mouse_cursor.y + "px")
-                        .style("position","absolute")
+                        .style("position", "absolute")
                         .transition()
                         .duration(150)
                         .style("opacity", 0.9);
@@ -246,15 +251,8 @@
                         return curved_line_path;
                     });
                 });
-
-            var legend_x = 0
-            var legend_y = 15
-
-            svg.append("g")
-                .attr("class", "legend")
-                .attr("transform", "translate(" + legend_x + "," + legend_y + ")");
-
-
+            svg.append("g").attr("transform", "translate(800,100)").call(genderLegend);
+            svg.append("g").attr("transform", "translate(1000,100)").call(vacLegend);
         });
     </script>
 </body>

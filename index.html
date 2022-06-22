@@ -1,0 +1,261 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+</head>
+<body>
+    <defs>
+        <linearGradient id="oceanGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <div id="category">
+                <div>Select Category</div>
+                <select id="control">
+                    <option selected="selected" value="gender">Gender</option>
+                    <option value="vaccinated">Vaccination Status</option>
+                </select>
+
+            </div>
+        </linearGradient>
+    </defs>
+    <svg viewBox="0 0 1300 800">
+        <g id="districts"></g>
+        <g transform="translate(1000,200)">
+            <g class="legendCells" transform="translate(0,15)">
+                <g class="cell" transform="translate(0,0)">
+                    <rect class="swatch" height="15" width="60" style="fill: rgb(100, 149, 237); "></rect>
+                    <text class="label" transform="translate(87,12)" style="text-anchor: middle;"> Female</text>
+                </g>
+                <g class="cell" transform="translate(0,20)">
+                    <rect class="swatch" height="15" width="60" style="fill: rgb(255, 192, 203); "></rect>
+                    <text class="label" transform="translate(80,12)" style="text-anchor: middle;"> Male</text>
+                </g>
+                <g class="cell" transform="translate(0,80)">
+                    <rect class="swatch" height="15" width="60" style="fill: rgb(45,201,55); "></rect>
+                    <text class="label" transform="translate(97,12)" style="text-anchor: middle;">Vaccinated</text>
+                </g>
+                <g class="cell" transform="translate(0,100)">
+                    <rect class="swatch" height="15" width="60" style="fill: rgb(219,123,43); "></rect>
+                    <text class="label" transform="translate(85,12)" style="text-anchor: middle;">Partial</text>
+                </g>
+                <g class="cell" transform="translate(0,120)">
+                    <rect class="swatch" height="15" width="60" style="fill: rgb(204,50,50); "></rect>
+                    <text class="label" transform="translate(115,12)" style="text-anchor: middle;">Not-Vaccinated</text>
+                </g>
+            </g>
+            <text class="gendTitle">Gender Legend</text>
+            <text class="vacTitle" transform="translate(0,85)">Vaccination Legend</text>
+        </g>
+    </svg>
+    <div class="tooltip"></div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        let width = 1300,
+            height = 800;
+
+        let svg = d3.select("svg").attr("viewBox", "0 0 " + width + " " + height);
+
+        // Load external data
+        Promise.all([
+            d3.json("links-sample.json"),
+            d3.json("cases-sample.json"),
+        ]).then((data) => {
+            // Data preprocessing
+            data[0].forEach((e) => {
+                e.source = e.infector;
+                e.target = e.infectee;
+            });
+
+            // create a tooltip
+            let tooltip = d3.select("div.tooltip");
+
+            console.log(data[0]); //links
+            console.log(data[1]); //cases
+
+            //directional arrow head to show direction of infection
+            svg
+                .append("svg:defs")
+                .append("svg:marker")
+                .attr("id", "arrow")
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 21)
+                .attr("refY", -1.5)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .attr("markerUnits", "strokeWidth")
+                .append("svg:path")
+                .attr("d", "M0,-5L11,0L0,5")
+                .attr("fill", "magenta");
+
+            // find root svg element
+            let svg_space = document.querySelector("svg");
+
+            // create an SVGPoint for future math
+            let pt = svg_space.createSVGPoint();
+
+            // Get point in global SVG space
+            function cursorPoint(event) {
+                pt.x = event.clientX;
+                pt.y = event.clientY;
+                return pt.matrixTransform(svg_space.getScreenCTM().inverse());
+            }
+
+            data[0].forEach((links) => {
+                links.x = width / 3;
+                links.y = height / 2;
+            });
+
+            let linkpath = svg
+                .append("g")
+                .attr("id", "links")
+                .attr("stroke-width", 2)
+                .selectAll("path")
+                .data(data[0])
+                .enter()
+                .append("path")
+                .attr("fill", "none")
+                .attr("stroke", "black")
+                .attr("marker-end", "url(#arrow)");
+
+            let genderColor = { male: "#FFC0CB", female: "#6495ED" };
+            let vaccinationStatusColor = {
+                yes: "#2dc937",
+                partial: "#db7b2b",
+                no: "#cc3232",
+            };
+
+            let node = svg
+                .append("g")
+                .attr("id", "nodes")
+                .selectAll("circle")
+                .data(data[1])
+                .enter()
+                .append("g")
+                .append("circle")
+                .attr("r", 18)
+                .style("fill", function (d) {
+                    return genderColor[d.gender];
+                })
+                .on("mouseover", (event, d) => {
+                    let mouse_cursor = cursorPoint(event);
+
+                    tooltip
+                        .html(
+                            `Age: ${d.age}<br>
+                                                Gender: ${d.gender}<br>
+                                                Nationality: ${d.nationality}<br>
+                                                Occupation: ${d.occupation}<br>
+                                                Organization: ${d.organization}<br>
+                                                Vaccinated: ${d.vaccinated}`)
+                        .style("left", mouse_cursor.x + "px")
+                        .style("top", mouse_cursor.y + "px")
+                        .style("position","absolute")
+                        .transition()
+                        .duration(150)
+                        .style("opacity", 0.9);
+                    d3.select(event.currentTarget)
+                        .style("stroke", "orange")
+                        .style("stroke-width", 3)
+                        .style("opacity", 1);
+                })
+                .on("mousemove", (event, d) => {
+                    d3.select(event.currentTarget)
+                        .style("stroke", "orange")
+                        .style("stroke-width", 3)
+                        .style("opacity", 1);
+                })
+                .on("mouseout", (event, d) => {
+                    tooltip.transition().duration(500).style("opacity", 0);
+                    d3.select(event.currentTarget)
+                        .style("stroke", "")
+                        .style("opacity", 1);
+                });
+
+            // on click event to togggle between vaccination status & gender
+            d3.select("#control").on("change", function () {
+                let display_type = d3.select(this).property("value");
+
+                if (display_type === "gender") {
+                    svg
+                        .selectAll("circle")
+                        .transition()
+                        .style("fill", function (d) {
+                            return genderColor[d.gender];
+                        });
+                } else {
+                    svg
+                        .selectAll("circle")
+                        .transition()
+                        .style("fill", function (d) {
+                            vaccinationStatus = d.vaccinated
+                                .split(/(\s+)/)
+                                .filter((e) => e.trim().length > 0)[0];
+
+                            return vaccinationStatusColor[vaccinationStatus];
+                        });
+                }
+            });
+
+            let simulation = d3
+                .forceSimulation()
+                .nodes(data[1])
+                .force(
+                    "x",
+                    d3
+                        .forceX()
+                        .strength(0.1)
+                        .x(width / 3.5)
+                )
+                .force(
+                    "y",
+                    d3
+                        .forceY()
+                        .strength(0.1)
+                        .y(height / 3.5)
+                )
+                .force(
+                    "link",
+                    d3.forceLink(data[0]).id((d) => d.id)
+                )
+                .force("charge", d3.forceManyBody().strength(10))
+                .force("collide", d3.forceCollide().strength(0.5).radius(40))
+                .on("tick", (d) => {
+                    node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+
+                    linkpath.attr("d", function (d) {
+                        let dx = d.target.x - d.source.x,
+                            dy = d.target.y - d.source.y,
+                            dr = Math.sqrt(dx * dx + dy * dy);
+
+                        // curved path
+                        let curved_line_path =
+                            "M" +
+                            d.source.x +
+                            "," +
+                            d.source.y +
+                            "A" +
+                            dr +
+                            "," +
+                            dr +
+                            " 0,0,1 " +
+                            d.target.x +
+                            "," +
+                            d.target.y;
+
+                        return curved_line_path;
+                    });
+                });
+
+            var legend_x = 0
+            var legend_y = 15
+
+            svg.append("g")
+                .attr("class", "legend")
+                .attr("transform", "translate(" + legend_x + "," + legend_y + ")");
+
+
+        });
+    </script>
+</body>
+</html>
